@@ -1,0 +1,140 @@
+<%# locals: (santander_chile_item:) %>
+
+<%= tag.div id: dom_id(santander_chile_item) do %>
+  <% unlinked_count = santander_chile_item.unlinked_accounts_count %>
+
+  <details open class="group bg-container p-4 shadow-border-xs rounded-xl">
+    <summary class="flex items-center justify-between gap-2 focus-visible:outline-hidden">
+      <div class="flex items-center gap-2">
+        <%= icon "chevron-right", class: "group-open:transform group-open:rotate-90" %>
+
+        <div class="flex items-center justify-center h-8 w-8 bg-destructive/10 rounded-full">
+          <%= tag.p "S", class: "text-destructive text-xs font-medium" %>
+        </div>
+
+        <div class="pl-1 text-sm">
+          <div class="flex items-center gap-2">
+            <%= tag.p santander_chile_item.institution_display_name, class: "font-medium text-primary" %>
+            <% if santander_chile_item.scheduled_for_deletion? %>
+              <p class="text-destructive text-sm animate-pulse"><%= t(".deletion_in_progress") %></p>
+            <% end %>
+          </div>
+          <p class="text-xs text-secondary"><%= t(".provider_name") %></p>
+
+          <% if santander_chile_item.syncing? %>
+            <div class="text-secondary flex items-center gap-1">
+              <%= icon "loader", size: "sm", class: "animate-spin" %>
+              <%= tag.span t(".syncing") %>
+            </div>
+          <% elsif santander_chile_item.requires_update? %>
+            <div class="text-warning flex items-center gap-1">
+              <%= icon "alert-triangle", size: "sm", color: "warning" %>
+              <%= tag.span t(".requires_update") %>
+            </div>
+          <% elsif santander_chile_item.sync_error.present? %>
+            <div class="text-secondary flex items-center gap-1">
+              <%= render DS::Tooltip.new(text: santander_chile_item.sync_error, icon: "alert-circle", size: "sm", color: "destructive") %>
+              <%= tag.span t(".error"), class: "text-destructive" %>
+            </div>
+          <% elsif santander_chile_item.last_synced_at %>
+            <p class="text-secondary">
+              <%= t(".status_with_summary", timestamp: time_ago_in_words(santander_chile_item.last_synced_at), summary: santander_chile_item.sync_status_summary) %>
+            </p>
+          <% else %>
+            <p class="text-secondary"><%= t(".status_never") %></p>
+          <% end %>
+        </div>
+      </div>
+
+      <% if Current.user&.admin? %>
+        <div class="flex items-center gap-2">
+          <% if santander_chile_item.requires_update? %>
+            <%= render DS::Link.new(
+              text: t(".update_credentials"),
+              icon: "refresh-cw",
+              variant: "secondary",
+              href: settings_providers_path(manage: "1"),
+              frame: "_top"
+            ) %>
+          <% else %>
+            <%= icon(
+              "refresh-cw",
+              as_button: true,
+              href: sync_santander_chile_item_path(santander_chile_item),
+              disabled: santander_chile_item.syncing?
+            ) %>
+          <% end %>
+
+          <%= render DS::Menu.new do |menu| %>
+            <% if unlinked_count.positive? %>
+              <% menu.with_item(
+                variant: "link",
+                text: t(".setup_action"),
+                icon: "settings",
+                href: setup_accounts_santander_chile_item_path(santander_chile_item),
+                frame: :modal
+              ) %>
+            <% end %>
+            <% menu.with_item(
+              variant: "link",
+              text: t(".update_credentials"),
+              icon: "cable",
+              href: settings_providers_path(manage: "1")
+            ) %>
+            <% menu.with_item(
+              variant: "button",
+              text: t(".delete"),
+              icon: "trash-2",
+              href: santander_chile_item_path(santander_chile_item),
+              method: :delete,
+              confirm: CustomConfirm.for_resource_deletion(santander_chile_item.name, high_severity: true)
+            ) %>
+          <% end %>
+        </div>
+      <% end %>
+    </summary>
+
+    <% unless santander_chile_item.scheduled_for_deletion? %>
+      <div class="space-y-4 mt-4">
+        <% if santander_chile_item.accounts.any? %>
+          <%= render "accounts/index/account_groups", accounts: santander_chile_item.accounts %>
+        <% end %>
+
+        <% stats = if defined?(@santander_chile_sync_stats_map) && @santander_chile_sync_stats_map
+             @santander_chile_sync_stats_map[santander_chile_item.id] || {}
+           else
+             santander_chile_item.syncs.ordered.first&.sync_stats || {}
+           end %>
+        <%= render ProviderSyncSummary.new(stats: stats, provider_item: santander_chile_item) %>
+
+        <% if unlinked_count.positive? && santander_chile_item.accounts.empty? %>
+          <div class="p-4 flex flex-col gap-3 items-center justify-center">
+            <p class="text-primary font-medium text-sm"><%= t(".setup_needed") %></p>
+            <p class="text-secondary text-sm"><%= t(".setup_description", linked: santander_chile_item.linked_accounts_count, total: santander_chile_item.total_accounts_count) %></p>
+            <%= render DS::Link.new(
+              text: t(".setup_action"),
+              icon: "settings",
+              variant: "primary",
+              href: setup_accounts_santander_chile_item_path(santander_chile_item),
+              frame: :modal
+            ) %>
+          </div>
+        <% elsif unlinked_count.positive? %>
+          <div class="pt-2 border-t border-primary">
+            <%= link_to setup_accounts_santander_chile_item_path(santander_chile_item),
+                        data: { turbo_frame: :modal },
+                        class: "flex items-center gap-2 text-sm text-secondary hover:text-primary transition-colors" do %>
+              <%= icon "plus", size: "sm" %>
+              <span><%= t(".more_accounts_available", count: unlinked_count) %></span>
+            <% end %>
+          </div>
+        <% elsif santander_chile_item.accounts.empty? && santander_chile_item.santander_chile_accounts.none? %>
+          <div class="p-4 flex flex-col gap-3 items-center justify-center">
+            <p class="text-primary font-medium text-sm"><%= t(".no_accounts_title") %></p>
+            <p class="text-secondary text-sm"><%= t(".no_accounts_description") %></p>
+          </div>
+        <% end %>
+      </div>
+    <% end %>
+  </details>
+<% end %>

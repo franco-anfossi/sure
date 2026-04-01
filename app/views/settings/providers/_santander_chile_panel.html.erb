@@ -1,0 +1,77 @@
+<div class="space-y-4">
+  <div class="prose prose-sm text-secondary">
+    <p class="text-primary font-medium"><%= t("santander_chile_items.panel.setup_instructions") %></p>
+    <ol>
+      <li><%= t("santander_chile_items.panel.step_1") %></li>
+      <li><%= t("santander_chile_items.panel.step_2") %></li>
+      <li><%= t("santander_chile_items.panel.step_3") %></li>
+    </ol>
+
+    <p class="text-primary font-medium"><%= t("santander_chile_items.panel.field_descriptions") %></p>
+    <ul>
+      <li><strong><%= t("santander_chile_items.panel.fields.rut.label") %>:</strong> <%= t("santander_chile_items.panel.fields.rut.description") %></li>
+      <li><strong><%= t("santander_chile_items.panel.fields.password.label") %>:</strong> <%= t("santander_chile_items.panel.fields.password.description") %> <%= t("santander_chile_items.panel.required") %></li>
+      <li><strong><%= t("santander_chile_items.panel.fields.chrome_path.label") %>:</strong> <%= t("santander_chile_items.panel.fields.chrome_path.description") %></li>
+      <li><strong><%= t("santander_chile_items.panel.fields.two_factor_timeout_sec.label") %>:</strong> <%= t("santander_chile_items.panel.fields.two_factor_timeout_sec.description") %></li>
+    </ul>
+  </div>
+
+  <% error_msg = local_assigns[:error_message] || @error_message %>
+  <% if error_msg.present? %>
+    <div class="p-2 rounded-md bg-destructive/10 text-destructive text-sm overflow-hidden">
+      <p class="line-clamp-3" title="<%= error_msg %>"><%= error_msg %></p>
+    </div>
+  <% end %>
+
+  <%
+    # Get or initialize a santander_chile_item for this family
+    # - If family has an item WITH credentials, use it (for updates)
+    # - If family has an item WITHOUT credentials, use it (to add credentials)
+    # - If family has no items at all, create a new one
+    santander_chile_item = Current.family.santander_chile_items.first_or_initialize(name: "Santander Chile Connection")
+    is_new_record = santander_chile_item.new_record?
+  %>
+
+  <%= styled_form_with model: santander_chile_item,
+                       url: is_new_record ? santander_chile_items_path : santander_chile_item_path(santander_chile_item),
+                       scope: :santander_chile_item,
+                       method: is_new_record ? :post : :patch,
+                       data: { turbo: true },
+                       class: "space-y-3" do |form| %>
+    <%= form.text_field :rut,
+                        label: t("santander_chile_items.panel.fields.rut.label"),
+                        placeholder: is_new_record ? t("santander_chile_items.panel.fields.rut.placeholder_new") : t("santander_chile_items.panel.fields.rut.placeholder_update"),
+                        value: santander_chile_item.rut %>
+
+    <%= form.text_field :password,
+                        label: t("santander_chile_items.panel.fields.password.label"),
+                        placeholder: is_new_record ? t("santander_chile_items.panel.fields.password.placeholder_new") : t("santander_chile_items.panel.fields.password.placeholder_update"),
+                        type: :password %>
+
+    <%= form.text_field :chrome_path,
+                        label: t("santander_chile_items.panel.fields.chrome_path.label"),
+                        placeholder: is_new_record ? t("santander_chile_items.panel.fields.chrome_path.placeholder_new") : t("santander_chile_items.panel.fields.chrome_path.placeholder_update"),
+                        value: santander_chile_item.chrome_path %>
+
+    <%= form.number_field :two_factor_timeout_sec,
+                        label: t("santander_chile_items.panel.fields.two_factor_timeout_sec.label"),
+                        placeholder: is_new_record ? t("santander_chile_items.panel.fields.two_factor_timeout_sec.placeholder_new") : t("santander_chile_items.panel.fields.two_factor_timeout_sec.placeholder_update"),
+                        value: santander_chile_item.two_factor_timeout_sec %>
+
+    <div class="flex justify-end">
+      <%= form.submit is_new_record ? t("santander_chile_items.panel.save_button") : t("santander_chile_items.panel.update_button"),
+                      class: "inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium btn btn--primary" %>
+    </div>
+  <% end %>
+
+  <% items = local_assigns[:santander_chile_items] || @santander_chile_items || Current.family.santander_chile_items.where.not(password: [nil, ""]) %>
+  <div class="flex items-center gap-2">
+    <% if items&.any? %>
+      <div class="w-2 h-2 bg-success rounded-full"></div>
+      <p class="text-sm text-secondary"><%= t("santander_chile_items.panel.status_configured_html", accounts_path: accounts_path).html_safe %></p>
+    <% else %>
+      <div class="w-2 h-2 bg-gray-400 rounded-full"></div>
+      <p class="text-sm text-secondary"><%= t("santander_chile_items.panel.status_not_configured") %></p>
+    <% end %>
+  </div>
+</div>

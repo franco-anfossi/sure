@@ -1,4 +1,5 @@
 class Family < ApplicationRecord
+  include SantanderChileConnectable
   include Syncable, AutoTransferMatchable, Subscribeable, VectorSearchable
   include PlaidConnectable, SimplefinConnectable, LunchflowConnectable, EnableBankingConnectable
   include CoinbaseConnectable, CoinstatsConnectable, SnaptradeConnectable, MercuryConnectable

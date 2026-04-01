@@ -78,5 +78,11 @@
         <%= render "settings/providers/indexa_capital_panel" %>
       </turbo-frame>
     <% end %>
+
+    <%= settings_section title: "Santander Chile (alpha)", collapsible: true, open: false do %>
+      <turbo-frame id="santander_chile-providers-panel">
+        <%= render "settings/providers/santander_chile_panel" %>
+      </turbo-frame>
+    <% end %>
   <% end %>
 </div>

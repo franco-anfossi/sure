@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_03_28_120000) do
+ActiveRecord::Schema[7.2].define(version: 2026_03_30_233903) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -40,7 +40,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_28_120000) do
     t.index ["account_id"], name: "index_account_shares_on_account_id"
     t.index ["user_id", "include_in_finances"], name: "index_account_shares_on_user_id_and_include_in_finances"
     t.index ["user_id"], name: "index_account_shares_on_user_id"
-    t.check_constraint "permission::text = ANY (ARRAY['full_control'::character varying, 'read_write'::character varying, 'read_only'::character varying]::text[])", name: "chk_account_shares_permission"
+    t.check_constraint "permission::text = ANY (ARRAY['full_control'::character varying::text, 'read_write'::character varying::text, 'read_only'::character varying::text])", name: "chk_account_shares_permission"
   end
 
   create_table "accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -535,7 +535,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_28_120000) do
     t.string "moniker", default: "Family", null: false
     t.string "assistant_type", default: "builtin", null: false
     t.string "default_account_sharing", default: "shared", null: false
-    t.check_constraint "default_account_sharing::text = ANY (ARRAY['shared'::character varying, 'private'::character varying]::text[])", name: "chk_families_default_account_sharing"
+    t.check_constraint "default_account_sharing::text = ANY (ARRAY['shared'::character varying::text, 'private'::character varying::text])", name: "chk_families_default_account_sharing"
     t.check_constraint "month_start_day >= 1 AND month_start_day <= 28", name: "month_start_day_range"
   end
 
@@ -1160,6 +1160,50 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_28_120000) do
     t.index ["family_id"], name: "index_rules_on_family_id"
   end
 
+  create_table "santander_chile_accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "santander_chile_item_id", null: false
+    t.string "name"
+    t.string "santander_chile_account_id"
+    t.string "account_number"
+    t.string "currency"
+    t.decimal "current_balance", precision: 19, scale: 4
+    t.string "account_status"
+    t.string "account_type"
+    t.string "provider"
+    t.jsonb "institution_metadata"
+    t.jsonb "raw_payload"
+    t.jsonb "raw_transactions_payload"
+    t.date "sync_start_date"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["santander_chile_item_id", "santander_chile_account_id"], name: "index_santander_chile_accounts_on_item_and_remote_id", unique: true
+    t.index ["santander_chile_item_id"], name: "index_santander_chile_accounts_on_santander_chile_item_id"
+  end
+
+  create_table "santander_chile_items", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "family_id", null: false
+    t.string "name"
+    t.string "institution_id"
+    t.string "institution_name"
+    t.string "institution_domain"
+    t.string "institution_url"
+    t.string "institution_color"
+    t.string "status", default: "good"
+    t.boolean "scheduled_for_deletion", default: false
+    t.boolean "pending_account_setup", default: false
+    t.datetime "sync_start_date"
+    t.jsonb "raw_payload"
+    t.jsonb "raw_institution_payload"
+    t.string "rut"
+    t.text "password"
+    t.string "chrome_path"
+    t.integer "two_factor_timeout_sec"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["family_id"], name: "index_santander_chile_items_on_family_id"
+    t.index ["status"], name: "index_santander_chile_items_on_status"
+  end
+
   create_table "securities", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.string "ticker", null: false
     t.string "name"
@@ -1180,7 +1224,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_28_120000) do
     t.index ["country_code"], name: "index_securities_on_country_code"
     t.index ["exchange_operating_mic"], name: "index_securities_on_exchange_operating_mic"
     t.index ["kind"], name: "index_securities_on_kind"
-    t.check_constraint "kind = ANY (ARRAY['standard'::text, 'cash'::text])", name: "chk_securities_kind"
+    t.check_constraint "kind::text = ANY (ARRAY['standard'::text, 'cash'::text])", name: "chk_securities_kind"
   end
 
   create_table "security_prices", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -1510,10 +1554,6 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_28_120000) do
     t.string "kind", default: "reconciliation", null: false
   end
 
-# Could not dump table "vector_store_chunks" because of following StandardError
-#   Unknown type 'vector(768)' for column 'embedding'
-
-
   create_table "vehicles", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
@@ -1596,6 +1636,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_28_120000) do
   add_foreign_key "rule_conditions", "rules"
   add_foreign_key "rule_runs", "rules"
   add_foreign_key "rules", "families"
+  add_foreign_key "santander_chile_accounts", "santander_chile_items"
+  add_foreign_key "santander_chile_items", "families"
   add_foreign_key "security_prices", "securities"
   add_foreign_key "sessions", "impersonation_sessions", column: "active_impersonator_session_id"
   add_foreign_key "sessions", "users"

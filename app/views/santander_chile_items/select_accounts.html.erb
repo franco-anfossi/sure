@@ -1,0 +1,52 @@
+<%= turbo_frame_tag "modal" do %>
+  <%= render DS::Dialog.new do |dialog| %>
+    <% dialog.with_header(title: t(".title")) %>
+
+    <% dialog.with_body do %>
+      <div class="space-y-4">
+        <p class="text-sm text-secondary">
+          <%= t(".description", product_name: product_name) %>
+        </p>
+
+        <% if @santander_chile_accounts.blank? %>
+          <div class="text-center py-8">
+            <%= icon "alert-circle", class: "text-warning mx-auto mb-4", size: "lg" %>
+            <p class="text-secondary"><%= t(".no_accounts_found") %></p>
+          </div>
+        <% else %>
+          <form action="<%= link_accounts_santander_chile_items_path %>" method="post" class="space-y-4" data-turbo-frame="_top">
+            <%= hidden_field_tag :authenticity_token, form_authenticity_token %>
+            <%= hidden_field_tag :accountable_type, @accountable_type %>
+            <%= hidden_field_tag :return_to, @return_to %>
+
+            <div class="space-y-2">
+              <% @santander_chile_accounts.each do |provider_account| %>
+                <label class="flex items-start gap-3 p-3 border border-primary rounded-lg hover:bg-subtle cursor-pointer transition-colors">
+                  <%= check_box_tag "selected_account_ids[]", provider_account.id, false, class: "mt-1" %>
+                  <div class="flex-1">
+                    <div class="font-medium text-sm text-primary">
+                      <%= provider_account.name %>
+                    </div>
+                    <div class="text-xs text-secondary mt-1">
+                      <%= provider_account.account_type.to_s.titleize %> •
+                      <%= provider_account.currency %> •
+                      <%= number_to_currency(provider_account.current_balance || 0, unit: Money::Currency.new(provider_account.currency || "CLP").symbol) %>
+                    </div>
+                  </div>
+                </label>
+              <% end %>
+            </div>
+
+            <div class="flex gap-2 justify-end pt-4">
+              <%= link_to t(".cancel"), @return_to || new_account_path,
+                  class: "inline-flex items-center gap-1 px-3 py-2 text-sm font-medium rounded-lg text-primary button-bg-secondary hover:button-bg-secondary-hover",
+                  data: { turbo_frame: "_top", action: "DS--dialog#close" } %>
+              <%= submit_tag t(".link_accounts"),
+                  class: "inline-flex items-center gap-1 px-3 py-2 text-sm font-medium rounded-lg text-inverse bg-inverse hover:bg-inverse-hover disabled:button-bg-disabled" %>
+            </div>
+          </form>
+        <% end %>
+      </div>
+    <% end %>
+  <% end %>
+<% end %>
